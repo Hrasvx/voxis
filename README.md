@@ -115,7 +115,7 @@ Voxis turns the audio track from a video or audio file into a standalone,
 This is the installation path for Alpine/musl:
 
 ```sh
-cd /home/user/audio-reactive-3d
+cd /home/user/voxis
 
 doas apk add \
   py3-pyside6 py3-numpy py3-pytest py3-pip py3-setuptools \
@@ -171,7 +171,7 @@ and place its `bin` directory on `PATH`.
 ## Run
 
 ```sh
-cd /home/user/audio-reactive-3d
+cd /home/user/voxis
 . .venv/bin/activate
 voxis
 ```
