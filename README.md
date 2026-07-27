@@ -3,7 +3,16 @@
 # VOXIS
 
 ### Audio, made spatial.
+</div>
 
+---
+
+<div align="center">
+
+<img src="voxis-output.gif" alt="Voxis visualization" width="100%">
+
+
+</div>
 Voxis transforms sound into a living 3D network of spectral peaks, acoustic
 relationships, and persistent history.
 
@@ -13,17 +22,6 @@ relationships, and persistent history.
 [![Stars](https://img.shields.io/github/stars/Hrasvx/voxis?style=for-the-badge&logo=github&color=FFE779)](https://github.com/Hrasvx/voxis/stargazers)
 
 **[Features](#features) · [Install](#requirements) · [Usage](#preview-usage) · [Export](#mp4-export)**
-
-</div>
-
----
-
-## Example
-
-<div align="center">
-
-<img src="assets/voxis-output.gif" alt="Voxis visualization" width="100%">
-
 
 </div>
 
