@@ -22,9 +22,8 @@ relationships, and persistent history.
 
 <div align="center">
 
-<img src=".github/assets/voxis-output.gif" alt="Voxis acoustic-network visualization" width="100%">
+<img src="assets/voxis-output.gif" alt="Voxis visualization" width="100%">
 
-<sub>Add your GIF at <code>.github/assets/voxis-output.gif</code>.</sub>
 
 </div>
 
