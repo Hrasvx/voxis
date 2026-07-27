@@ -20,7 +20,7 @@ relationships, and persistent history.
 [![OpenGL](https://img.shields.io/badge/OpenGL-3.3%2B-5586A4?style=for-the-badge&logo=opengl&logoColor=white)](https://www.opengl.org/)
 [![License](https://img.shields.io/badge/License-MIT-8A63FF?style=for-the-badge)](LICENSE)
 [![Stars](https://img.shields.io/github/stars/Hrasvx/voxis?style=for-the-badge&logo=github&color=FFE779)](https://github.com/Hrasvx/voxis/stargazers)
-
+<div align="center">
 **[Features](#features) · [Install](#requirements) · [Usage](#preview-usage) · [Export](#mp4-export)**
 
 </div>
