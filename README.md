@@ -286,6 +286,6 @@ my project on GitHub :) .
 
 <div align="center">
 
-Made by **Hrasvx**
+Inspired by 
 
 </div>
