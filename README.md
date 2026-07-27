@@ -107,7 +107,6 @@ Voxis turns the audio track from a video or audio file into a standalone,
 - Python 3.11 or newer
 - OpenGL 3.3 Core or newer
 - FFmpeg with `libx264` and AAC encoding
-- A Qt Multimedia backend capable of playing the source audio codec
 
 ## Install from PyPI
 
