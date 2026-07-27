@@ -30,10 +30,7 @@ relationships, and persistent history.
 ---
 
 Voxis turns the audio track from a video or audio file into a standalone,
-scientific-looking 3D point network. Source video frames are never displayed,
-rendered, or mapped into an export. The application previews the structure live
-and produces deterministic MP4 files containing only the visualization and
-source audio.
+3D point mapping network. It's only usage is to look cool lol
 
 ## Architecture and visual mapping
 
