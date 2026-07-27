@@ -247,28 +247,7 @@ Rotating diagnostic logs are stored at:
 ~/.local/state/voxis/application.log
 ```
 
-## Tests
 
-```sh
-pytest
-```
-
-Tests cover:
-
-- FFT frequency, multi-peak creation, silence, spectral-shape, onset, stereo,
-  and timestamp features;
-- media-clock interpolation, seek generations, stale-frame dropping;
-- temporal peak tracking, phrase-boundary gating, time/phrase-invariant
-  positioning, typed similarity/harmonic webs, duplicate prevention, count and
-  degree caps;
-- deterministic point/network output and seeking reconstruction;
-- FFmpeg mapping that excludes source video and includes source audio;
-- absence of any runtime video decode/widget path and export dimension/FPS
-  normalization.
-
-A real integration smoke export using the supplied 20.295-second MOV produced a
-20.300-second H.264/AAC MP4. Two identical runs produced byte-identical files,
-proving fixed-timestep deterministic output on the tested machine.
 
 If Voxis is useful to you, consider leaving a star. It helps other people find
 my project on GitHub :) .
