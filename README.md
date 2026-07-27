@@ -286,6 +286,6 @@ my project on GitHub :) .
 
 <div align="center">
 
-Inspired by 
+Inspired by Lucio Arese's project
 
 </div>
