@@ -18,7 +18,7 @@ relationships, and persistent history.
 
 ---
 
-## Output
+## Example
 
 <div align="center">
 
@@ -39,52 +39,42 @@ source audio.
 ## Architecture and visual mapping
 
 1. **Desktop and playback:** PySide6 supplies the responsive interface,
-   `QMediaPlayer` audio playback, volume, transport controls, and authoritative
-   millisecond media clock. No video output is attached.
+   `QMediaPlayer` audio playback, volume, transport controls.
 2. **Decode and analysis:** a dedicated PyAV worker decodes only the selected
    audio stream into overlapping STFT windows. Each window detects up to forty
-   meaningful local peaks with magnitude, prominence, SNR, bandwidth, phase,
-   stereo balance, and harmonicity rather than collapsing a frame to one point.
+   meaningful local peaks with magnitude, prominence, SNR, bandwidth, phase.
 3. **Context and phrases:** MFCC-like coefficients, delta coefficients,
    centroid, bandwidth, contrast energy, flatness, rolloff, RMS, onset,
    dominant pitch, and harmonicity are standardized and embedded into a stable
    global 3D PCA space. Silence, onset, and spectral-change detection divide the
-   recording into tracking segments without assigning chronological positions.
+   recording into tracking segments.
 4. **3D mapping:** selected peaks are emitted on a deterministic visual cadence
    instead of once per STFT hop. Log frequency shapes the vertical axis;
    centroid, timbre, stereo balance, bandwidth, and peak volume shape the
    horizontal axis; pitch, loudness, rolloff, harmonicity, and timbre shape
-   depth. Timestamp and phrase order never affect coordinates, so identical
-   sounds return to the same region. Phase contributes only a tiny stable
-   acoustic offset.
+   depth.
 5. **Typed point networks:** temporal tracking, intra-frame harmonic webs, and
    cross-time similarity links are built separately. A bounded spatial hash and
    strict per-type/total degree limits prevent all-pairs graph soup and duplicate
-   edges. No filled acoustic faces are rendered.
+   edges.
 6. **Preview synchronization:** the audio is pre-analyzed with progress before
-   transport is enabled. Every frame has an exact audio timestamp. A seek
-   deterministically replays cached features so tracking and retained history
-   match uninterrupted playback.
+   transport is enabled. A seek deterministically replays cached features so tracking
+   and retained history match uninterrupted playback.
 6. **Deterministic export:** export analyzes a finite feature cache, resets the
    configured random seed, advances the same point simulation at exact
    `frame_index / FPS` timestamps, and renders with a standalone ModernGL
    context. Raw RGB frames are streamed to FFmpeg, which takes audio only from
-   the imported source. Rendering speed never alters output timestamps.
+   the imported source.
 7. **GPU rendering:** reusable ModernGL point/line buffers render up to 25,000
    visible nodes and 100,000 visible lines. White point cores, colored halos,
    neutral-gray typed edges, a faint 3D acoustic grid, fog, auto-fit camera
    framing, and model-space three-axis tumble keep the structure legible and
-   volumetric. New nodes bloom for one second and then settle into persistent
-   historical geometry.
-8. **Overlays and post effects:** strongest-node scientific labels and boxes
+   volumetric.
+8. **Overlays and post effects:** strongest-node labels and boxes
    remain visible throughout retained history and are shared by preview and
    offline export. Their percentage, maximum count, box size, text size, and
    opacity floor are adjustable. Logarithmic frequency legends, trails,
    restrained bloom, fine grain, flicker, vignette, and fog remain configurable.
-
-The architecture keeps UI, playback, decode, analysis, simulation, rendering,
-and export responsibilities separate. Apparently “make some dots react to
-audio” is how one accidentally invents a small broadcast facility.
 
 ## Features
 
@@ -124,15 +114,12 @@ audio” is how one accidentally invents a small broadcast facility.
 - FFmpeg with `libx264` and AAC encoding
 - A Qt Multimedia backend capable of playing the source audio codec
 
-Container extensions do not guarantee codec support. They are labels on boxes,
-not diplomatic immunity.
-
 ## Alpine Linux installation
 
-This is the tested installation path for Alpine/musl:
+This is the installation path for Alpine/musl:
 
 ```sh
-cd /home/yakub/audio-reactive-3d
+cd /home/user/audio-reactive-3d
 
 doas apk add \
   py3-pyside6 py3-numpy py3-pytest py3-pip py3-setuptools \
@@ -147,9 +134,6 @@ python -m pip install --upgrade pip setuptools wheel
 python -m pip install av moderngl glcontext
 python -m pip install -e . --no-deps
 ```
-
-`mesa-dev` and `libx11-dev` are needed because `glcontext` builds its X11/GLX
-backend locally on musl.
 
 ## Other Linux distributions
 
@@ -191,7 +175,7 @@ and place its `bin` directory on `PATH`.
 ## Run
 
 ```sh
-cd /home/yakub/audio-reactive-3d
+cd /home/user/audio-reactive-3d
 . .venv/bin/activate
 voxis
 ```
@@ -224,11 +208,6 @@ source-video panel.
 4. Select the output path, custom resolution, 24/30/60 FPS, and bitrate.
 5. Watch analysis/render progress or choose **Cancel export**.
 
-Export uses the settings snapshot taken when export begins. Preview performance
-scaling is never applied to offline output. FFmpeg receives generated raw video
-as input zero and maps only audio stream `1:a:0` from the source; source image
-stream `1:v` is never mapped.
-
 The default export is 1920×1080, 60 FPS, H.264 at 16 Mbps with stereo AAC.
 Dimensions are normalized to even values for broadly compatible `yuv420p`.
 
@@ -251,12 +230,6 @@ The UI updates all controls immediately:
 - glow/bloom/grain/flicker/trails/scanlines/chromatic separation/background;
 - random seed, preview FPS limit, and analysis look-ahead.
 
-Settings persist at:
-
-```text
-~/.config/voxis/config.json
-```
-
 Factory defaults are documented in `config/default.json`.
 
 Higher **Sensitivity** generally admits more audible activity and therefore
@@ -266,10 +239,6 @@ reduces point creation. For strict ceilings, use **Maximum peaks / frame**,
 **Visible point limit**, **Max lines per point**, and **Visible line limit**.
 
 ## Error handling and logs
-
-The UI reports missing audio streams, damaged/unsupported media, playback codec
-errors, unavailable OpenGL, missing FFmpeg, invalid output paths, insufficient
-disk space, encoding failures, and cancellation. Partial exports are removed.
 
 Rotating diagnostic logs are stored at:
 
@@ -313,40 +282,9 @@ proving fixed-timestep deterministic output on the tested machine.
 </a>
 
 If Voxis is useful to you, consider leaving a star. It helps other people find
-the project in GitHub's extremely calm and entirely non-chaotic ocean of code.
+my project on GitHub :) .
 
 </div>
-
-## License
-
-Voxis is available under the MIT License. See `LICENSE`.
-
-## Project structure
-
-```text
-src/voxis/
-├── main.py, config.py, presets.py, models.py, preview_controller.py
-├── media_import.py, audio_extraction.py, logging_config.py, errors.py
-├── ui/
-│   ├── main_window.py, settings_panel.py
-│   └── export_dialog.py
-├── playback/
-│   ├── controller.py, clock.py, synchronizer.py
-│   ├── media_probe.py
-│   └── audio_decode.py
-├── analysis/
-│   ├── audio_analyzer.py, pipeline.py
-│   └── feature_cache.py
-├── visualization/
-│   ├── renderer.py, offscreen.py, postprocessing.py, camera.py
-│   ├── points.py, connections.py, spatial_index.py
-│   └── shaders/
-└── export/
-    ├── worker.py
-    └── ffmpeg_encoder.py
-tests/
-config/default.json
-```
 
 ---
 
