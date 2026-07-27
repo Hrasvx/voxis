@@ -12,7 +12,7 @@ relationships, and persistent history.
 [![License](https://img.shields.io/badge/License-MIT-8A63FF?style=for-the-badge)](LICENSE)
 [![Stars](https://img.shields.io/github/stars/Hrasvx/voxis?style=for-the-badge&logo=github&color=FFE779)](https://github.com/Hrasvx/voxis/stargazers)
 
-**[Features](#features) · [Install](#requirements) · [Usage](#preview-usage) · [Export](#mp4-export) · [Star history](#star-history)**
+**[Features](#features) · [Install](#requirements) · [Usage](#preview-usage) · [Export](#mp4-export)**
 
 </div>
 
