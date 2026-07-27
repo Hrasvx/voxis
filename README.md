@@ -265,18 +265,6 @@ A real integration smoke export using the supplied 20.295-second MOV produced a
 20.300-second H.264/AAC MP4. Two identical runs produced byte-identical files,
 proving fixed-timestep deterministic output on the tested machine.
 
-## Star history
-
-<div align="center">
-
-<a href="https://www.star-history.com/Hrasvx/voxis">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=Hrasvx/voxis&type=Date&theme=dark">
-    <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=Hrasvx/voxis&type=Date">
-    <img alt="Voxis star history graph" src="https://api.star-history.com/svg?repos=Hrasvx/voxis&type=Date" width="700">
-  </picture>
-</a>
-
 If Voxis is useful to you, consider leaving a star. It helps other people find
 my project on GitHub :) .
 
