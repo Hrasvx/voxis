@@ -25,10 +25,30 @@ Voxis transforms sound into a 3D network of visual points.
 
 </div>
 
----
 
 Voxis turns the audio track from a video or audio file into a standalone,
 3D point mapping network. It's only usage is to look cool lol
+
+---
+
+
+<div align="center">
+
+## ✦ Coming Soon
+
+</div>
+
+> **Upcoming additions**
+>
+> - **Real-time microphone input**  
+>   Live mic instead of inputting files.
+>
+> - **More graph types**  
+>   more graphs, thinking of 2d & 3d
+>
+
+
+
 
 ## Architecture and visual mapping
 
