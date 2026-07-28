@@ -14,8 +14,7 @@
 
 </div>
 <div align="center">
-Voxis transforms sound into a living 3D network of spectral peaks, acoustic
-relationships, and persistent history.
+Voxis transforms sound into a 3D network of visual points.
 
 [![Python](https://img.shields.io/badge/Python-3.11%2B-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
 [![OpenGL](https://img.shields.io/badge/OpenGL-3.3%2B-5586A4?style=for-the-badge&logo=opengl&logoColor=white)](https://www.opengl.org/)
