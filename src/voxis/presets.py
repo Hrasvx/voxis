@@ -10,7 +10,30 @@ class VisualPreset:
     name: str
     colors: tuple[tuple[float, float, float], ...]
     background: tuple[float, float, float]
-    overrides: dict[str, float]
+    overrides: dict[str, float | bool | str]
+
+
+def resolve_background(
+    preset: VisualPreset,
+    color: str,
+    brightness: float,
+) -> tuple[float, float, float]:
+    text = str(color).strip()
+    if len(text) == 7 and text.startswith("#"):
+        try:
+            selected = tuple(
+                int(text[index : index + 2], 16) / 255.0
+                for index in (1, 3, 5)
+            )
+        except ValueError:
+            selected = preset.background
+    else:
+        selected = preset.background
+    scale = max(0.0, min(1.5, float(brightness)))
+    return tuple(
+        max(0.0, min(1.0, component * scale))
+        for component in selected
+    )
 
 
 PRESETS: dict[str, VisualPreset] = {

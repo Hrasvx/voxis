@@ -101,8 +101,10 @@ Voxis turns the audio track from a video or audio file into a standalone,
 - Adaptive 0–40 peak creation per STFT frame with true silence gating.
 - Acoustic clouds, branches, fans, long-lived history, typed edges,
   bounded approximate-neighbor searches, and adaptive preview density.
+- Optional bounded Spiderweb mode connects every visible point pair while
+  respecting the configured GPU line limit.
 - Auto-fit framing, manual orbit/pan/zoom, reset, and slow non-identical X/Y/Z
-  rotation with deterministic modulation.
+  rotation with deterministic modulation and unrestricted 360° manual orbit.
 - Full-screen abstract preview.
 - Deterministic offline MP4 export at custom even dimensions, 24/30/60 FPS, and
   custom bitrate.
@@ -238,16 +240,17 @@ The UI updates all controls immediately:
 - FFT/hop size, adaptive peak limits, prominence, noise/silence thresholds,
   smoothing, phrase sensitivity, and band influence;
 - core/halo size, white-core brightness, fresh-node size/glow boost and settle
-  time, visible count, active/history durations, persistent history, spread,
-  and brightness;
+  time, visible count, active/history durations, persistent history, overall
+  spread, independent horizontal/frequency-axis spacing, and brightness;
 - independent temporal/intra/similarity edge strength and caps, total degree,
-  line count, thickness, brightness, opacity, and lifetime;
+  line count, thickness, brightness, opacity, lifetime, and Spiderweb mode;
 - X/Y/Z rotation, auto-fit occupancy/smoothing, new-node camera follow strength,
   responsiveness, speed, hold/return timing, distance limits, FOV, and fog;
 - palette reversal, persistent scientific label percentage/count/box/text/
   opacity controls, preview/export frequency legends, and medium/high quality
   limits;
-- glow/bloom/grain/flicker/trails/scanlines/chromatic separation/background;
+- glow/bloom/grain/flicker/trails/scanlines/chromatic separation, background
+  brightness, and custom background color;
 - random seed, preview FPS limit, and analysis look-ahead.
 
 Factory defaults are documented in `config/default.json`.

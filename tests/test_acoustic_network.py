@@ -6,14 +6,14 @@ import numpy as np
 from voxis.analysis.audio_analyzer import AudioAnalyzer, finalize_context_embedding
 from voxis.config import VisualizationSettings, load_settings
 from voxis.models import AnalysisFrame, AudioChunk, SpectralPeak
-from voxis.presets import PRESETS
+from voxis.presets import PRESETS, resolve_background
 from voxis.visualization.points import (
     EDGE_INTRA,
     EDGE_SIMILARITY,
     EDGE_TEMPORAL,
     PointManager,
 )
-from voxis.ui.settings_panel import SECTIONS
+from voxis.ui.settings_panel import BOOLEAN_FIELDS, SECTIONS
 from voxis.visualization.camera import Camera
 
 
@@ -539,7 +539,7 @@ def test_legacy_factory_defaults_migrate_to_dense_bright_defaults(tmp_path) -> N
 
     settings = load_settings(path)
 
-    assert settings.schema_version == 8
+    assert settings.schema_version == 9
     assert settings.fft_size == 4096
     assert settings.frequency_min == 300.0
     assert settings.point_brightness == 1.6
@@ -574,7 +574,7 @@ def test_schema_four_visual_profile_is_replaced_once(tmp_path) -> None:
 
     settings = load_settings(path)
 
-    assert settings.schema_version == 8
+    assert settings.schema_version == 9
     assert settings.line_thickness == VisualizationSettings().line_thickness
     assert settings.point_core_size == VisualizationSettings().point_core_size
     assert settings.viewport_occupancy == VisualizationSettings().viewport_occupancy
@@ -697,6 +697,8 @@ def test_requested_visual_controls_are_available() -> None:
         "new_node_size_boost",
         "new_node_glow_boost",
         "node_settle_duration",
+        "horizontal_spacing",
+        "frequency_spacing",
         "label_percentage",
         "label_max_count",
         "label_box_size",
@@ -708,7 +710,126 @@ def test_requested_visual_controls_are_available() -> None:
         "camera_focus_hold_duration",
         "camera_return_duration",
     } <= names
+    assert dict(BOOLEAN_FIELDS)["spiderweb"] == "Spiderweb"
     assert "point_generation_rate" not in names
+
+
+def test_spiderweb_connects_every_visible_point_once() -> None:
+    settings = VisualizationSettings(
+        spiderweb=True,
+        node_interval_s=0.02,
+        visible_line_limit=1000,
+    )
+    manager = PointManager(71)
+    manager.ingest(
+        frame(0.0, frequencies=(500.0, 800.0, 1200.0, 2400.0, 4800.0)),
+        settings,
+        PRESETS[settings.palette],
+    )
+    manager.update_at(0.08, settings)
+
+    _, lines = manager.vertex_arrays(settings)
+
+    point_count = len(manager.points)
+    assert len(lines) // 2 == point_count * (point_count - 1) // 2
+
+
+def test_spiderweb_respects_visible_line_limit() -> None:
+    frequencies = tuple(float(value) for value in np.geomspace(320.0, 15000.0, 30))
+    settings = VisualizationSettings(
+        spiderweb=True,
+        node_interval_s=0.02,
+        visible_line_limit=256,
+    )
+    manager = PointManager(73)
+    manager.ingest(
+        frame(0.0, frequencies=frequencies),
+        settings,
+        PRESETS[settings.palette],
+    )
+    manager.update_at(0.08, settings)
+
+    _, lines = manager.vertex_arrays(settings)
+
+    assert len(lines) == settings.visible_line_limit * 2
+
+
+def test_frequency_spacing_resizes_existing_history_live() -> None:
+    settings = VisualizationSettings(frequency_spacing=1.0)
+    manager = PointManager(79)
+    manager.ingest(
+        frame(0.0, frequencies=(500.0, 8000.0)),
+        settings,
+        PRESETS[settings.palette],
+    )
+    manager.update_at(0.1, settings)
+    compact = np.asarray(
+        [point.position.copy() for point in manager.points.values()]
+    )
+
+    settings.frequency_spacing = 3.0
+    manager.update_at(0.1, settings)
+    stretched = np.asarray(
+        [point.position.copy() for point in manager.points.values()]
+    )
+
+    np.testing.assert_allclose(stretched[:, (0, 2)], compact[:, (0, 2)])
+    np.testing.assert_allclose(stretched[:, 1], compact[:, 1] * 3.0)
+
+
+def test_horizontal_spacing_resizes_existing_history_live() -> None:
+    settings = VisualizationSettings(horizontal_spacing=1.0)
+    manager = PointManager(83)
+    manager.ingest(
+        frame(0.0, frequencies=(500.0, 8000.0)),
+        settings,
+        PRESETS[settings.palette],
+    )
+    manager.update_at(0.1, settings)
+    compact = np.asarray(
+        [point.position.copy() for point in manager.points.values()]
+    )
+
+    settings.horizontal_spacing = 2.5
+    manager.update_at(0.1, settings)
+    stretched = np.asarray(
+        [point.position.copy() for point in manager.points.values()]
+    )
+
+    np.testing.assert_allclose(stretched[:, 0], compact[:, 0] * 2.5)
+    np.testing.assert_allclose(stretched[:, 1:], compact[:, 1:])
+
+
+def test_camera_manual_orbit_has_no_pitch_limit() -> None:
+    camera = Camera()
+
+    camera.rotate(0.0, 500.0)
+
+    assert camera.pitch > 1.4
+    model, _, _ = camera.matrices(
+        1.0,
+        9.0,
+        47.0,
+        0.0,
+        0.0,
+        (0.0, 0.0, 0.0),
+    )
+    assert np.isfinite(model).all()
+
+
+def test_custom_background_color_is_validated_and_resolved() -> None:
+    settings = VisualizationSettings(background_color="#804020")
+    settings.validated()
+
+    assert settings.background_color == "#804020"
+    assert resolve_background(PRESETS[settings.palette], settings.background_color, 1.0) == (
+        128 / 255,
+        64 / 255,
+        32 / 255,
+    )
+    settings.background_color = "not-a-color"
+    settings.validated()
+    assert settings.background_color == "#000000"
 
 
 def test_lowering_max_lines_per_point_prunes_existing_edges() -> None:

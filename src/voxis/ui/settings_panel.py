@@ -5,14 +5,19 @@ from __future__ import annotations
 from dataclasses import asdict
 
 from PySide6.QtCore import Qt, Signal
+from PySide6.QtGui import QColor
 from PySide6.QtWidgets import (
     QCheckBox,
+    QColorDialog,
     QComboBox,
     QDoubleSpinBox,
     QFormLayout,
     QFrame,
+    QHBoxLayout,
     QLabel,
+    QPushButton,
     QScrollArea,
+    QSlider,
     QSpinBox,
     QVBoxLayout,
     QWidget,
@@ -60,6 +65,8 @@ SECTIONS = (
             ("node_interval_s", "Node interval", 0.02, 1.0, 0.01, 2),
             ("fade_speed", "Fade speed", 0.1, 5.0, 0.1, 2),
             ("spatial_spread", "Spatial spread", 0.2, 4.0, 0.05, 2),
+            ("horizontal_spacing", "Horizontal spacing", 0.25, 8.0, 0.05, 2),
+            ("frequency_spacing", "Frequency spacing", 0.25, 8.0, 0.05, 2),
             ("point_brightness", "Brightness", 0.1, 3.0, 0.05, 2),
         ),
     ),
@@ -178,6 +185,7 @@ COMBO_FIELDS = {
 }
 
 BOOLEAN_FIELDS = (
+    ("spiderweb", "Spiderweb"),
     ("automatic_rotation", "Automatic rotation"),
     ("auto_fit_camera", "Auto fit geometry"),
     ("camera_follow_new_nodes", "Follow new nodes"),
@@ -189,6 +197,104 @@ BOOLEAN_FIELDS = (
     ("frequency_legend_preview", "Frequency legend in preview"),
     ("frequency_legend_export", "Frequency legend in export"),
 )
+
+
+class FloatSliderControl(QWidget):
+    valueChanged = Signal(float)
+
+    def __init__(
+        self,
+        minimum: float,
+        maximum: float,
+        step: float,
+        decimals: int,
+        value: float,
+        parent=None,
+    ) -> None:
+        super().__init__(parent)
+        self._step = float(step)
+        layout = QHBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(6)
+        self.slider = QSlider(Qt.Orientation.Horizontal)
+        self.slider.setRange(
+            round(float(minimum) / self._step),
+            round(float(maximum) / self._step),
+        )
+        self.spin = QDoubleSpinBox()
+        self.spin.setRange(float(minimum), float(maximum))
+        self.spin.setSingleStep(self._step)
+        self.spin.setDecimals(int(decimals))
+        self.spin.setKeyboardTracking(False)
+        self.spin.setFixedWidth(72)
+        layout.addWidget(self.slider, 1)
+        layout.addWidget(self.spin)
+        self.slider.valueChanged.connect(self._slider_changed)
+        self.spin.valueChanged.connect(self._spin_changed)
+        self.setValue(value)
+
+    def value(self) -> float:
+        return float(self.spin.value())
+
+    def setValue(self, value: float) -> None:
+        bounded = max(
+            self.spin.minimum(),
+            min(self.spin.maximum(), float(value)),
+        )
+        self.slider.blockSignals(True)
+        self.spin.blockSignals(True)
+        self.slider.setValue(round(bounded / self._step))
+        self.spin.setValue(bounded)
+        self.slider.blockSignals(False)
+        self.spin.blockSignals(False)
+
+    def _slider_changed(self, value: int) -> None:
+        selected = value * self._step
+        self.spin.blockSignals(True)
+        self.spin.setValue(selected)
+        self.spin.blockSignals(False)
+        self.valueChanged.emit(selected)
+
+    def _spin_changed(self, value: float) -> None:
+        self.slider.blockSignals(True)
+        self.slider.setValue(round(value / self._step))
+        self.slider.blockSignals(False)
+        self.valueChanged.emit(float(value))
+
+
+class ColorButton(QPushButton):
+    colorChanged = Signal(str)
+
+    def __init__(self, value: str, parent=None) -> None:
+        super().__init__(parent)
+        self._color = "#000000"
+        self.clicked.connect(self._choose)
+        self.setColor(value)
+
+    def color(self) -> str:
+        return self._color
+
+    def setColor(self, value: str) -> None:
+        color = QColor(str(value))
+        if not color.isValid():
+            color = QColor("#000000")
+        self._color = color.name().upper()
+        lightness = color.lightnessF()
+        foreground = "#101114" if lightness > 0.58 else "#F4F5F8"
+        self.setText(self._color)
+        self.setStyleSheet(
+            f"background-color: {self._color}; color: {foreground};"
+        )
+
+    def _choose(self) -> None:
+        selected = QColorDialog.getColor(
+            QColor(self._color),
+            self,
+            "Select visualization background",
+        )
+        if selected.isValid():
+            self.setColor(selected.name())
+            self.colorChanged.emit(self._color)
 
 
 class SettingsPanel(QFrame):
@@ -222,7 +328,30 @@ class SettingsPanel(QFrame):
             form.setSpacing(7)
             form.setLabelAlignment(Qt.AlignmentFlag.AlignLeft)
             for name, label, minimum, maximum, step, decimals in specs:
-                if name == "fft_size":
+                if name in {"horizontal_spacing", "frequency_spacing"}:
+                    control = FloatSliderControl(
+                        minimum,
+                        maximum,
+                        step,
+                        decimals,
+                        float(getattr(settings, name)),
+                    )
+                    axis_name = (
+                        "horizontal brightness"
+                        if name == "horizontal_spacing"
+                        else "vertical logarithmic frequency"
+                    )
+                    control.setToolTip(
+                        f"Stretches only the {axis_name} axis. "
+                        "Existing points move immediately."
+                    )
+                    control.valueChanged.connect(
+                        lambda value, key=name: self.setting_changed.emit(
+                            key,
+                            value,
+                        )
+                    )
+                elif name == "fft_size":
                     control = QComboBox()
                     control.addItems(["512", "1024", "2048", "4096", "8192"])
                     control.setCurrentText(str(settings.fft_size))
@@ -268,8 +397,26 @@ class SettingsPanel(QFrame):
             combo_form.addRow(name.replace("_", " ").title(), control)
         layout.addLayout(combo_form)
 
+        color_form = QFormLayout()
+        background_control = ColorButton(settings.background_color)
+        background_control.setToolTip(
+            "Select any background color; Background brightness controls "
+            "its intensity."
+        )
+        background_control.colorChanged.connect(
+            lambda value: self.setting_changed.emit("background_color", value)
+        )
+        self.controls["background_color"] = background_control
+        color_form.addRow("Background color", background_control)
+        layout.addLayout(color_form)
+
         for name, label in BOOLEAN_FIELDS:
             control = QCheckBox(label)
+            if name == "spiderweb":
+                control.setToolTip(
+                    "Connects every visible pair when possible, bounded by "
+                    "the Visible line limit for GPU safety."
+                )
             control.setChecked(getattr(settings, name))
             control.toggled.connect(
                 lambda value, key=name: self.setting_changed.emit(key, value)
@@ -290,6 +437,8 @@ class SettingsPanel(QFrame):
                 control.setChecked(bool(value))
             elif isinstance(control, QComboBox):
                 control.setCurrentText(str(value))
+            elif isinstance(control, ColorButton):
+                control.setColor(str(value))
             else:
                 control.setValue(value)
             control.blockSignals(False)

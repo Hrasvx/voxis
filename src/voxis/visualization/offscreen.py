@@ -8,7 +8,7 @@ import moderngl
 import numpy as np
 
 from ..config import VisualizationSettings
-from ..presets import VisualPreset
+from ..presets import VisualPreset, resolve_background
 from .camera import Camera
 from .grid import grid_vertices
 from .points import PointManager
@@ -65,8 +65,10 @@ class OffscreenRenderer:
         point_data, line_data = manager.vertex_arrays(
             settings, quality=settings.export_quality
         )
-        background = tuple(
-            value * settings.background_brightness for value in preset.background
+        background = resolve_background(
+            preset,
+            settings.background_color,
+            settings.background_brightness,
         )
         self.ctx.viewport = (0, 0, self.width, self.height)
         self.ctx.enable(

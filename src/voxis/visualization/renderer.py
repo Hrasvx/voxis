@@ -14,7 +14,7 @@ from PySide6.QtOpenGLWidgets import QOpenGLWidget
 from ..config import SettingsState
 from ..playback.clock import MediaClock
 from ..playback.synchronizer import TimelineSynchronizer
-from ..presets import DEFAULT_PRESET, PRESETS, VisualPreset
+from ..presets import DEFAULT_PRESET, PRESETS, VisualPreset, resolve_background
 from .camera import Camera
 from .grid import grid_vertices
 from .points import PointManager
@@ -214,9 +214,10 @@ class VisualizationWidget(QOpenGLWidget):
             moderngl.BLEND | moderngl.DEPTH_TEST | moderngl.PROGRAM_POINT_SIZE
         )
         self._ctx.blend_func = moderngl.SRC_ALPHA, moderngl.ONE
-        background = tuple(
-            component * settings.background_brightness
-            for component in self.preset.background
+        background = resolve_background(
+            self.preset,
+            settings.background_color,
+            settings.background_brightness,
         )
         self._post.begin_scene(background)
 

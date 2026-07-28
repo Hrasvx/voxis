@@ -33,7 +33,10 @@
   "node_interval_s": 0.12,
   "fade_speed": 1.0,
   "spatial_spread": 1.55,
+  "horizontal_spacing": 1.0,
+  "frequency_spacing": 1.0,
   "point_brightness": 1.6,
+  "spiderweb": false,
   "connection_radius": 1.4,
   "max_connections_per_point": 6,
   "max_temporal_connections": 1,
@@ -78,6 +81,7 @@
   "scanline_intensity": 0.02,
   "chromatic_aberration": 0.04,
   "background_brightness": 0.32,
+  "background_color": "#000000",
   "palette": "Full Spectral Rainbow",
   "reverse_palette": false,
   "scientific_labels": true,
@@ -93,5 +97,5 @@
   "export_quality": "High",
   "random_seed": 24301,
   "performance_limit_fps": 60,
-  "schema_version": 8
+  "schema_version": 9
 }

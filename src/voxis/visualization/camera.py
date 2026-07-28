@@ -31,8 +31,8 @@ class Camera:
         self._last_media_time = None
 
     def rotate(self, dx: float, dy: float) -> None:
-        self.yaw += dx * 0.006
-        self.pitch = float(np.clip(self.pitch + dy * 0.006, -1.4, 1.4))
+        self.yaw = _wrap_angle(self.yaw + dx * 0.006)
+        self.pitch = _wrap_angle(self.pitch + dy * 0.006)
 
     def zoom(self, delta: float) -> None:
         self.distance_offset = float(
@@ -191,3 +191,7 @@ def _perspective(fov: float, aspect: float, near: float, far: float) -> np.ndarr
     result[2, 3] = (2.0 * far * near) / (near - far)
     result[3, 2] = -1.0
     return result
+
+
+def _wrap_angle(angle: float) -> float:
+    return math.remainder(float(angle), math.tau)

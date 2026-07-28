@@ -18,7 +18,7 @@ void main() {
     float activity = smoothstep(0.46, 0.90, vertex_color.a);
     float core = 1.0 - smoothstep(0.10, 0.48, radius);
     float halo = (1.0 - smoothstep(0.14, 1.0, radius)) *
-                 mix(0.28, 0.72, activity) * glow_intensity;
+                 mix(0.32, 0.86, activity) * glow_intensity;
     float intensity = core + halo;
     vec3 color = mix(vertex_color.rgb, background_color, fog_amount);
     float white_mix = clamp(white_core_intensity, 0.0, 1.0) *

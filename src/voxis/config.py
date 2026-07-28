@@ -46,8 +46,11 @@ class VisualizationSettings:
     node_interval_s: float = 0.12
     fade_speed: float = 1.0
     spatial_spread: float = 1.55
+    horizontal_spacing: float = 1.0
+    frequency_spacing: float = 1.0
     point_brightness: float = 1.6
 
+    spiderweb: bool = False
     connection_radius: float = 1.4
     max_connections_per_point: int = 6
     max_temporal_connections: int = 1
@@ -94,6 +97,7 @@ class VisualizationSettings:
     scanline_intensity: float = 0.02
     chromatic_aberration: float = 0.04
     background_brightness: float = 0.32
+    background_color: str = "#000000"
 
     palette: str = "Full Spectral Rainbow"
     reverse_palette: bool = False
@@ -111,7 +115,7 @@ class VisualizationSettings:
 
     random_seed: int = 24301
     performance_limit_fps: int = 60
-    schema_version: int = 8
+    schema_version: int = 9
 
     def validated(self) -> "VisualizationSettings":
         self.audio_sensitivity = _clamp(self.audio_sensitivity, 0.05, 8.0)
@@ -185,6 +189,8 @@ class VisualizationSettings:
         self.node_interval_s = _clamp(self.node_interval_s, 0.02, 1.0)
         self.fade_speed = _clamp(self.fade_speed, 0.1, 5.0)
         self.spatial_spread = _clamp(self.spatial_spread, 0.2, 4.0)
+        self.horizontal_spacing = _clamp(self.horizontal_spacing, 0.25, 8.0)
+        self.frequency_spacing = _clamp(self.frequency_spacing, 0.25, 8.0)
         self.point_brightness = _clamp(self.point_brightness, 0.1, 3.0)
 
         self.connection_radius = _clamp(self.connection_radius, 0.0, 1.6)
@@ -265,6 +271,7 @@ class VisualizationSettings:
         self.background_brightness = _clamp(
             self.background_brightness, 0.0, 1.5
         )
+        self.background_color = _validated_hex_color(self.background_color)
         self.label_percentage = _clamp(self.label_percentage, 0.0, 1.0)
         self.label_max_count = int(_clamp(self.label_max_count, 1, 2000))
         self.label_box_size = _clamp(self.label_box_size, 2.0, 24.0)
@@ -288,7 +295,7 @@ class VisualizationSettings:
         self.performance_limit_fps = int(
             _clamp(self.performance_limit_fps, 24, 144)
         )
-        self.schema_version = 8
+        self.schema_version = 9
         return self
 
     def update(self, name: str, value: Any) -> None:
@@ -481,6 +488,9 @@ def load_settings(path: Path = DEFAULT_CONFIG_PATH) -> VisualizationSettings:
         payload.pop("movement_speed", None)
         payload.pop("point_generation_rate", None)
         payload["schema_version"] = 8
+        schema_version = 8
+    if schema_version < 9:
+        payload["schema_version"] = 9
     if "max_active_points" in payload and "visible_point_limit" not in payload:
         payload["visible_point_limit"] = max(6000, int(payload["max_active_points"]))
     for field in fields(settings):
@@ -506,6 +516,18 @@ def save_settings(
 
 def _clamp(value: float, low: float, high: float) -> float:
     return max(low, min(high, value))
+
+
+def _validated_hex_color(value: str) -> str:
+    text = str(value).strip().upper()
+    if len(text) == 7 and text.startswith("#"):
+        try:
+            int(text[1:], 16)
+        except ValueError:
+            pass
+        else:
+            return text
+    return "#000000"
 
 
 class SettingsState:

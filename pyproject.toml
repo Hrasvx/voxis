@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "voxis3d"
-version = "1.0.0"
+version = "1.1.0"
 description = "Open-source audio-reactive 3D acoustic network visualization"
 readme = "README.md"
 requires-python = ">=3.11"

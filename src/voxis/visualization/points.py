@@ -16,6 +16,7 @@ from .spatial_index import SpatialHash
 EDGE_TEMPORAL = "temporal"
 EDGE_INTRA = "intra"
 EDGE_SIMILARITY = "similarity"
+NEUTRAL_LINE_COLOR = np.asarray((0.34, 0.36, 0.38), dtype=np.float32)
 
 
 @dataclass(slots=True)
@@ -30,6 +31,7 @@ class VisualEdge:
 @dataclass(slots=True)
 class VisualPoint:
     id: int
+    acoustic_position: np.ndarray
     base_position: np.ndarray
     position: np.ndarray
     color: np.ndarray
@@ -239,17 +241,23 @@ class PointManager:
             if point.age > total_lifetime:
                 expired.append(point.id)
                 continue
-            appear = _smoothstep(0.0, 1.0, point.age / 0.07)
+            settle_duration = max(settings.node_settle_duration, 1e-6)
+            birth = _settle_envelope(point.age / settle_duration)
+            appear_duration = min(0.14, settle_duration * 0.22)
+            appear = _smoothstep(
+                0.0,
+                1.0,
+                point.age / max(appear_duration, 1e-6),
+            )
             if point.age <= settings.active_duration:
                 active_progress = point.age / max(settings.active_duration, 1e-6)
-                settle = _settle_envelope(
-                    point.age / max(settings.node_settle_duration, 1e-6)
-                )
                 alpha = 0.98 - active_progress * 0.18
                 brightness = (
-                    1.08
-                    + settings.new_node_glow_boost * settle
-                    + point.audio_energy * (0.22 + settle * 0.20)
+                    1.04
+                    + settings.new_node_glow_boost
+                    * birth
+                    * (0.82 + point.audio_energy * 0.28)
+                    + point.audio_energy * 0.22
                 )
             else:
                 history_progress = (
@@ -273,6 +281,10 @@ class PointManager:
             )
             point.alpha = appear * max(0.0, alpha)
             point.brightness = brightness * flicker
+            point.base_position = _visual_position(
+                point.acoustic_position,
+                settings,
+            )
             point.position = point.base_position
         self._remove_points(expired)
         if not settings.persistent_history:
@@ -422,57 +434,35 @@ class PointManager:
                 point.size * settings.point_size * bloom_settle
             )
 
-        kind_order = {EDGE_TEMPORAL: 0, EDGE_INTRA: 1, EDGE_SIMILARITY: 2}
-        visible_edges = [
-            edge
-            for edge in self.edges.values()
-            if edge.first_id in visible_ids and edge.second_id in visible_ids
-        ]
-        visible_edges.sort(
-            key=lambda edge: (
-                kind_order[edge.kind],
-                -edge.creation_time,
-                edge.first_id,
-                edge.second_id,
-            )
-        )
         line_limit = settings.visible_line_limit
         if active_quality == "Medium":
             line_limit = min(line_limit, 15000)
-        visible_edges = visible_edges[:line_limit]
-        line_rows: list[np.ndarray] = []
-        for edge in visible_edges:
-            first = self.points.get(edge.first_id)
-            second = self.points.get(edge.second_id)
-            if first is None or second is None:
-                continue
-            alpha = (
-                min(first.alpha, second.alpha)
-                * settings.connection_opacity
-                * edge.strength
-            )
-            neutral = np.asarray((0.34, 0.36, 0.38), dtype=np.float32)
-            first_color = (
-                neutral * 0.76 + first.color * 0.24
-            ) * settings.line_brightness
-            second_color = (
-                neutral * 0.76 + second.color * 0.24
-            ) * settings.line_brightness
-            line_rows.append(
-                np.concatenate(
-                    (first.position, first_color, np.asarray([alpha]))
+        if settings.spiderweb:
+            lines = _spiderweb_lines(visible_points, line_limit, settings)
+        else:
+            kind_order = {
+                EDGE_TEMPORAL: 0,
+                EDGE_INTRA: 1,
+                EDGE_SIMILARITY: 2,
+            }
+            visible_edges = [
+                edge
+                for edge in self.edges.values()
+                if edge.first_id in visible_ids and edge.second_id in visible_ids
+            ]
+            visible_edges.sort(
+                key=lambda edge: (
+                    kind_order[edge.kind],
+                    -edge.creation_time,
+                    edge.first_id,
+                    edge.second_id,
                 )
             )
-            line_rows.append(
-                np.concatenate(
-                    (second.position, second_color, np.asarray([alpha]))
-                )
+            lines = _typed_edge_lines(
+                visible_edges[:line_limit],
+                self.points,
+                settings,
             )
-        lines = (
-            np.asarray(line_rows, dtype=np.float32)
-            if line_rows
-            else np.empty((0, 7), dtype=np.float32)
-        )
         return point_rows, lines
 
     def _create_point(
@@ -543,7 +533,8 @@ class PointManager:
                 ),
             )
         )
-        position *= settings.spatial_spread / 1.55
+        acoustic_position = position
+        position = _visual_position(acoustic_position, settings)
         db_strength = float(
             np.clip((peak.magnitude_db + 72.0) / 66.0, 0.0, 1.0)
         )
@@ -568,6 +559,7 @@ class PointManager:
         )
         point = VisualPoint(
             id=_stable_node_id(frame.timestamp_s, peak_index),
+            acoustic_position=acoustic_position.copy(),
             base_position=position.copy(),
             position=position,
             color=_palette_color(preset, palette_position),
@@ -704,6 +696,10 @@ class PointManager:
         timestamp: float,
         settings: VisualizationSettings,
     ) -> None:
+        if settings.spiderweb:
+            self._similarity_dirty = True
+            self._last_similarity_bucket = -1
+            return
         bucket = int(max(0.0, timestamp) / 2.0)
         if not self._similarity_dirty or bucket == self._last_similarity_bucket:
             return
@@ -742,7 +738,7 @@ class PointManager:
                         continue
                     distance = float(
                         np.linalg.norm(
-                            point.base_position - other.base_position
+                            point.acoustic_position - other.acoustic_position
                         )
                     )
                     if distance > radius:
@@ -895,12 +891,14 @@ class PointManager:
             EDGE_SIMILARITY: 2,
         }
         victims: set[tuple[int, int]] = set()
+        incident_by_point: dict[int, list[tuple[tuple[int, int], VisualEdge]]] = {
+            point_id: [] for point_id in self.points
+        }
+        for key, edge in self.edges.items():
+            incident_by_point.get(edge.first_id, []).append((key, edge))
+            incident_by_point.get(edge.second_id, []).append((key, edge))
         for point in sorted(self.points.values(), key=lambda item: item.id):
-            incident = [
-                (key, edge)
-                for key, edge in self.edges.items()
-                if edge.first_id == point.id or edge.second_id == point.id
-            ]
+            incident = incident_by_point.get(point.id, [])
             for kind, limit in kind_limits.items():
                 matching = sorted(
                     (
@@ -996,6 +994,83 @@ class PointManager:
                 self.points[edge.second_id].connections.discard(edge.first_id)
 
 
+def _typed_edge_lines(
+    edges: list[VisualEdge],
+    points: dict[int, VisualPoint],
+    settings: VisualizationSettings,
+) -> np.ndarray:
+    rows = np.empty((len(edges) * 2, 7), dtype=np.float32)
+    written = 0
+    for edge in edges:
+        first = points.get(edge.first_id)
+        second = points.get(edge.second_id)
+        if first is None or second is None:
+            continue
+        alpha = (
+            min(first.alpha, second.alpha)
+            * settings.connection_opacity
+            * edge.strength
+        )
+        _write_line(rows, written, first, second, alpha, settings.line_brightness)
+        written += 2
+    return rows[:written]
+
+
+def _spiderweb_lines(
+    points: list[VisualPoint],
+    limit: int,
+    settings: VisualizationSettings,
+) -> np.ndarray:
+    point_count = len(points)
+    if point_count < 2 or limit <= 0:
+        return np.empty((0, 7), dtype=np.float32)
+    edge_count = min(limit, point_count * (point_count - 1) // 2)
+    rows = np.empty((edge_count * 2, 7), dtype=np.float32)
+    strength = float(np.clip(1.4 / math.sqrt(point_count), 0.035, 0.22))
+    written_edges = 0
+    for gap in range(1, point_count):
+        for first_index in range(point_count - gap):
+            first = points[first_index]
+            second = points[first_index + gap]
+            alpha = (
+                min(first.alpha, second.alpha)
+                * settings.connection_opacity
+                * strength
+            )
+            _write_line(
+                rows,
+                written_edges * 2,
+                first,
+                second,
+                alpha,
+                settings.line_brightness,
+            )
+            written_edges += 1
+            if written_edges >= edge_count:
+                return rows
+    return rows[: written_edges * 2]
+
+
+def _write_line(
+    rows: np.ndarray,
+    row: int,
+    first: VisualPoint,
+    second: VisualPoint,
+    alpha: float,
+    brightness: float,
+) -> None:
+    rows[row, :3] = first.position
+    rows[row, 3:6] = (
+        NEUTRAL_LINE_COLOR * 0.82 + first.color * 0.18
+    ) * brightness
+    rows[row, 6] = alpha
+    rows[row + 1, :3] = second.position
+    rows[row + 1, 3:6] = (
+        NEUTRAL_LINE_COLOR * 0.82 + second.color * 0.18
+    ) * brightness
+    rows[row + 1, 6] = alpha
+
+
 def _fallback_peaks(
     frame: AnalysisFrame, settings: VisualizationSettings
 ) -> tuple[SpectralPeak, ...]:
@@ -1062,6 +1137,17 @@ def _log_frequency_norm(frequency: float, minimum: float, maximum: float) -> flo
             1.0,
         )
     )
+
+
+def _visual_position(
+    acoustic_position: np.ndarray,
+    settings: VisualizationSettings,
+) -> np.ndarray:
+    position = np.asarray(acoustic_position, dtype=np.float32).copy()
+    position *= settings.spatial_spread / 1.55
+    position[0] *= settings.horizontal_spacing
+    position[1] *= settings.frequency_spacing
+    return position
 
 
 def _timbre_descriptor(
